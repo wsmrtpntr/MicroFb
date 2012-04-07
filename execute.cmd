@@ -1,0 +1,1 @@
+java -cp proj/;jars/plume.jar;jars/lib.jar edu.washington.cs.cse490h.lib.MessageLayer join " " -s -L total.log -l partial.log -n RIOTester -f 0 -c scripts/TwoGenerals
