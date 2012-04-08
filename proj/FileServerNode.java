@@ -1,3 +1,4 @@
+import java.io.IOException;
 import edu.washington.cs.cse490h.lib.Utility;
 
 
@@ -17,7 +18,8 @@ public class FileServerNode extends RIONode {
 		case "create":
 			int ret = create(cmds[1]);
 			// return code to the client
-			RIOSend(from, Protocol.DATA, Utility.stringToByteArray(Integer.toString(ret)));
+			// TODO why only Protocol.RIOTEST_PKT? 
+			RIOSend(from, Protocol.RIOTEST_PKT, Utility.stringToByteArray(Integer.toString(ret)));
 			break;
 		default:
 			logSynopticEvent("FileServer: Unknown command:" + cmds[0]);
@@ -43,7 +45,16 @@ public class FileServerNode extends RIONode {
 	 */
 	private int create(String filename)
 	{
-		// create a new file. Need to use PersistentStorageWriter
+		if(Utility.fileExists(this, filename)){
+			return FileAlreadyExists;
+		}
+		
+		try {
+			getWriter(filename, false);
+		} catch (IOException e) {
+			return FileAlreadyExists;
+		}
+		
 		return Success;
 	}
 }
