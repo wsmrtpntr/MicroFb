@@ -2,3 +2,5 @@ start 0
 start 1
 time
 0 create 1 testfile
+0 create 1 testfile2
+0 create 1 testfile3

@@ -4,7 +4,6 @@ public enum IoStatus {
 	FileAlreadyExists(11),
 	OperationTimeout(20),
 	FileTooLarge(30),
-	None(1),
 	Success(0);
 	
 	public int code;
@@ -14,7 +13,7 @@ public enum IoStatus {
 	}
 	
 	public static IoStatus parseInt(int code){
-		IoStatus s = IoStatus.None;
+		IoStatus s = IoStatus.Success;
 		s.code = code;
 		return s;
 	}

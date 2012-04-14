@@ -30,10 +30,10 @@ public class FileServerNode extends RIONode {
 		String[] cmds = Utility.byteArrayToString(msg).split(" ");
 		switch(cmds[0]){
 		case "create":
-			int ret = create(cmds[1]);
-			// return code to the client
-			// TODO why only Protocol.RIOTEST_PKT? 
-			RIOSend(from, Protocol.RIOTEST_PKT, Utility.stringToByteArray("acknowledge create " + Integer.toString(ret)));
+			IoStatus ret = create(cmds[2]);
+			RIOSend(from, 
+					Protocol.RIOTEST_PKT, 
+					Utility.stringToByteArray("acknowledge create " + cmds[1] + " " + Integer.toString(ret.code)));
 			break;
 		case "heartbeat":
 			// ignore the heart beats
@@ -43,24 +43,22 @@ public class FileServerNode extends RIONode {
 		}
 	}
 
-
-
 	/*
 	 * 	This command creates an empty file called filename. If the file already exists, 
 	 * this should fail in the manner described	below.
 	 */
-	private int create(String filename)
+	private IoStatus create(String filename)
 	{
 		if(Utility.fileExists(this, filename)){
-			return FileAlreadyExists;
+			return IoStatus.FileAlreadyExists;
 		}
 		
 		try {
 			getWriter(filename, false);
 		} catch (IOException e) {
-			return FileAlreadyExists;
+			return IoStatus.FileAlreadyExists;
 		}
 		
-		return Success;
+		return IoStatus.Success;
 	}
 }
