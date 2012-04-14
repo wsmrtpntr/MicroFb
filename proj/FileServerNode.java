@@ -12,20 +12,7 @@ public class FileServerNode extends RIONode {
 	
 	@Override
 	public void onRIOReceive(Integer from, int protocol, byte[] msg) {
-		// TODO - define the protocol between the server and the client
-		String[] cmds = Utility.byteArrayToString(msg).split(" ");
-		switch(cmds[0]){
-		case "create":
-			int ret = create(cmds[1]);
-			// return code to the client
-			// TODO why only Protocol.RIOTEST_PKT? 
-			RIOSend(from, Protocol.RIOTEST_PKT, Utility.stringToByteArray(Integer.toString(ret)));
-			break;
-		default:
-			logSynopticEvent("FileServer: Unknown command:" + cmds[0]);
-			// TODO log commands we did not understand
-			break;
-		}
+		processMessage(from, protocol, msg);
 	}
 
 	@Override
@@ -38,6 +25,25 @@ public class FileServerNode extends RIONode {
 	public void onCommand(String command) {
 		// TODO Auto-generated method stub
 	}
+	
+	protected void processMessage(Integer from, int protocol, byte[] msg) {
+		String[] cmds = Utility.byteArrayToString(msg).split(" ");
+		switch(cmds[0]){
+		case "create":
+			int ret = create(cmds[1]);
+			// return code to the client
+			// TODO why only Protocol.RIOTEST_PKT? 
+			RIOSend(from, Protocol.RIOTEST_PKT, Utility.stringToByteArray("acknowledge create " + Integer.toString(ret)));
+			break;
+		case "heartbeat":
+			// ignore the heart beats
+			break;
+		default:
+			break;
+		}
+	}
+
+
 
 	/*
 	 * 	This command creates an empty file called filename. If the file already exists, 
