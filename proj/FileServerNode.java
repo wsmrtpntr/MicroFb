@@ -22,7 +22,51 @@ public class FileServerNode extends RIONode {
 	@Override
 	public void start() {
 		// TODO Auto-generated method stub
-
+		/*if .temp exists
+		 PSReader temp = getReader(.temp)
+		 if (!temp.ready())
+		   delete temp
+		 else
+		   filename = temp.readLine()
+		   oldContents = read rest of temp
+		   PSWriter revertFile = getWriter(filename, false)
+		   revertFile.write(oldContents)
+		   delete temp
+		   */
+		
+		// see if we need to recover any operation if node failed
+		PersistentStorageReader tempReader;
+		try {
+			tempReader = getReader(".temp");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			return;
+		}
+		
+		try {
+			if(!tempReader.ready()) {
+				// delete temporary file
+				tempReader.close();
+				PersistentStorageWriter writer = getWriter(".temp", true);
+				writer.delete();
+			} else {
+				String filename = tempReader.readLine();
+				PersistentStorageWriter writer = getWriter(filename,  false);
+				StringBuilder rest = new StringBuilder();
+				ReadAsString(rest, tempReader);
+				writer.write(rest.toString());
+				writer.close();
+				
+				// delete temporary file
+				tempReader.close();
+				PersistentStorageWriter tempwriter = getWriter(".temp", true);
+				tempwriter.delete();
+				tempwriter.close();
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -63,7 +107,7 @@ public class FileServerNode extends RIONode {
 			}
 			break;
 		case "put": {
-			IoStatus ret = put(cmds[2]);
+			IoStatus ret = put(cmds[2], cmds[3]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
 					Utility.stringToByteArray("acknowledge put " + cmds[1] + " " + Integer.toString(ret.code)));
@@ -102,9 +146,16 @@ public class FileServerNode extends RIONode {
 		try {
 			reader = getReader(filename);
 		} catch (FileNotFoundException e1) {
-			return IoStatus.FileAlreadyExists;
+			return IoStatus.FileDoesNotExist;
 		}
 		
+		ReadAsString(results, reader);
+		
+		return IoStatus.Success;
+	}
+
+	private void ReadAsString(StringBuilder results,
+			PersistentStorageReader reader) {
 		char[] charbuf = new char[4096];
 		try {
 			int cbRead = 0;
@@ -115,8 +166,6 @@ public class FileServerNode extends RIONode {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		return IoStatus.Success;
 	}
 	
 	private IoStatus append(String filename, String data)
@@ -137,11 +186,31 @@ public class FileServerNode extends RIONode {
 	
 	private IoStatus put(String filename, String data)
 	{
+		StringBuilder fileContents = new StringBuilder();
+		IoStatus getResult = get(filename, fileContents);
+		if(getResult != IoStatus.Success) {
+			return getResult;
+		}
+
+		PersistentStorageWriter tempWriter = null;
+		try {
+			tempWriter = getWriter(".temp", false);
+			tempWriter.write(filename);
+			tempWriter.write("\n");
+			tempWriter.write(fileContents.toString());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			return IoStatus.FileAlreadyExists;
+		}
+		
 		try {
 			// TODO implement put so it's resilient to node failures
 			PersistentStorageWriter writer = getWriter(filename, false);
-			writer.append(data);
+			writer.write(data);
+			tempWriter.delete();
 		} catch (IOException e) {
+			e.printStackTrace();
 			return IoStatus.FileDoesNotExist;
 		}
 		
