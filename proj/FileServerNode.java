@@ -1,4 +1,8 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import edu.washington.cs.cse490h.lib.PersistentStorageReader;
+import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 
@@ -29,11 +33,41 @@ public class FileServerNode extends RIONode {
 	protected void processMessage(Integer from, int protocol, byte[] msg) {
 		String[] cmds = Utility.byteArrayToString(msg).split(" ");
 		switch(cmds[0]){
-		case "create":
+		case "create": {
 			IoStatus ret = create(cmds[2]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
 					Utility.stringToByteArray("acknowledge create " + cmds[1] + " " + Integer.toString(ret.code)));
+			}
+			break;
+		case "get": {
+			StringBuilder results = new StringBuilder();
+			IoStatus ret = get(cmds[2], results);
+			RIOSend(from, 
+					Protocol.RIOTEST_PKT, 
+					Utility.stringToByteArray("acknowledge get " + cmds[1] + " " + Integer.toString(ret.code) + " " + results.toString()));
+			}
+			break;
+		case "append": {
+			IoStatus ret = append(cmds[2], cmds[3]);
+			RIOSend(from, 
+					Protocol.RIOTEST_PKT, 
+					Utility.stringToByteArray("acknowledge append " + cmds[1] + " " + Integer.toString(ret.code)));
+			}
+			break;
+		case "delete": {
+			IoStatus ret = delete(cmds[2]);
+			RIOSend(from, 
+					Protocol.RIOTEST_PKT, 
+					Utility.stringToByteArray("acknowledge delete " + cmds[1] + " " + Integer.toString(ret.code)));
+			}
+			break;
+		case "put": {
+			IoStatus ret = put(cmds[2]);
+			RIOSend(from, 
+					Protocol.RIOTEST_PKT, 
+					Utility.stringToByteArray("acknowledge put " + cmds[1] + " " + Integer.toString(ret.code)));
+			}
 			break;
 		case "heartbeat":
 			// ignore the heart beats
@@ -61,4 +95,75 @@ public class FileServerNode extends RIONode {
 		
 		return IoStatus.Success;
 	}
+	
+	private IoStatus get(String filename, StringBuilder results){
+
+		PersistentStorageReader reader;
+		try {
+			reader = getReader(filename);
+		} catch (FileNotFoundException e1) {
+			return IoStatus.FileAlreadyExists;
+		}
+		
+		char[] charbuf = new char[4096];
+		try {
+			int cbRead = 0;
+			while( (cbRead = reader.read(charbuf, 0, 4096))  != -1){
+				results.append(charbuf, 0, cbRead);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return IoStatus.Success;
+	}
+	
+	private IoStatus append(String filename, String data)
+	{
+		if(!Utility.fileExists(this, filename)){
+			return IoStatus.FileDoesNotExist;
+		}
+		
+		try {
+			PersistentStorageWriter writer = getWriter(filename, true);
+			writer.append(data);
+		} catch (IOException e) {
+			return IoStatus.FileDoesNotExist;
+		}
+		
+		return IoStatus.Success;
+	}
+	
+	private IoStatus put(String filename, String data)
+	{
+		try {
+			// TODO implement put so it's resilient to node failures
+			PersistentStorageWriter writer = getWriter(filename, false);
+			writer.append(data);
+		} catch (IOException e) {
+			return IoStatus.FileDoesNotExist;
+		}
+		
+		return IoStatus.Success;
+	}
+	
+	private IoStatus delete(String filename)
+	{
+		if(!Utility.fileExists(this, filename)){
+			return IoStatus.FileDoesNotExist;
+		}
+			
+		try {
+			// TODO implement put so it's resilient to node failures
+			PersistentStorageWriter writer = getWriter(filename, true);
+			writer.delete();
+		} catch (IOException e) {
+			return IoStatus.FileDoesNotExist;
+		}
+		
+		return IoStatus.Success;
+	}
+	
+	
 }

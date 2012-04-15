@@ -25,7 +25,7 @@ public class FileServerTester extends FileServerClient {
 	private class CreateRequest implements INotify{
 		
 		@Override
-		public void OnCompleted(IoStatus result) {
+		public void OnCompleted(IoStatus result, String data) {
 			System.out.println("Operation completed with code " + result.toString());
 		}
 		

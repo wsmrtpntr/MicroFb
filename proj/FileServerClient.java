@@ -9,7 +9,6 @@ public class FileServerClient extends FileServerNode {
 
 	// id of the next request
 	private int nextRequest = 0;
-	private int createResult = -1;
 	private HashMap<Integer, INotify> pendingRequests = new HashMap<Integer, INotify>();
 	
 	@Override
@@ -30,20 +29,70 @@ public class FileServerClient extends FileServerNode {
 		}
 		
 		switch(pieces[1]){
-			case "create":
+			case "create": 
+			case "append":
+			case "put":
+			case "delete": {
 				Integer requestId = Integer.parseInt(pieces[2]);
 				IoStatus status = IoStatus.parseInt(Integer.parseInt(pieces[3]));
 				NotifyAndRemove(requestId, status);
+				}
 				break;
+				
+			case "get" : {
+				Integer requestId = Integer.parseInt(pieces[2]);
+				IoStatus status = IoStatus.parseInt(Integer.parseInt(pieces[3]));
+				CompleteRequest(requestId, status, pieces.length >= 5 ? pieces[4] : null);				
+				}
+			break;
+			
 			default: break;
 		}
 	}
 	
 	
-	public int Create(int destAddr, String filename, INotify onCompleted)
+	public void Create(int destAddr, String filename, INotify onCompleted)
 	{
 		int requestId = GetNextId();
 		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("create " + String.valueOf(requestId) + " " + filename));
+		RegisterPendingRequest(requestId, destAddr, onCompleted);
+	}
+	
+	public void Get(int destAddr, String filename, INotify onCompleted)
+	{
+		int requestId = GetNextId();
+		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("get " + String.valueOf(requestId) + " " + filename));
+		RegisterPendingRequest(requestId, destAddr, onCompleted);
+	}
+	
+	public void Delete(int destAddr, String filename, INotify onCompleted)
+	{
+		int requestId = GetNextId();
+		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("delete " + String.valueOf(requestId) + " " + filename));
+		RegisterPendingRequest(requestId, destAddr, onCompleted);
+	}
+	
+	public void Append(int destAddr, String filename, String data, INotify onCompleted)
+	{
+		int requestId = GetNextId();
+		RIOSend(
+				destAddr, 
+				Protocol.RIOTEST_PKT, 
+				Utility.stringToByteArray("append " + String.valueOf(requestId) + " " + filename + " " + data));
+		RegisterPendingRequest(requestId, destAddr, onCompleted);
+	}
+	
+	public void Put(int destAddr, String filename, String data, INotify onCompleted)
+	{
+		int requestId = GetNextId();
+		RIOSend(
+				destAddr, 
+				Protocol.RIOTEST_PKT, 
+				Utility.stringToByteArray("put " + String.valueOf(requestId) + " " + filename + " " + data));
+		RegisterPendingRequest(requestId, destAddr, onCompleted);
+	}
+	
+	private void RegisterPendingRequest(int requestId, int destAddr, INotify onCompleted) {
 		pendingRequests.put(requestId, onCompleted);
 		
 		// register the timeout
@@ -61,8 +110,6 @@ public class FileServerClient extends FileServerNode {
 		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
 		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
 		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
-
-		return createResult;
 	}
 	
 	public void onTimeout(Integer requestId)
@@ -75,8 +122,12 @@ public class FileServerClient extends FileServerNode {
 	}
 	
 	private synchronized void NotifyAndRemove(Integer requestId, IoStatus status){
+		CompleteRequest(requestId, status, null);
+	}
+	
+	private synchronized void CompleteRequest(Integer requestId, IoStatus status, String result){
 		if(pendingRequests.containsKey(requestId)){
-			pendingRequests.get(requestId).OnCompleted(status);
+			pendingRequests.get(requestId).OnCompleted(status, result);
 			pendingRequests.remove(requestId);
 		}
 	}
