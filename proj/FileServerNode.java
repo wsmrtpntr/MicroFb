@@ -21,6 +21,8 @@ public class FileServerNode extends RIONode {
 
 	@Override
 	public void start() {
+		super.start();
+		
 		// TODO Auto-generated method stub
 		/*if .temp exists
 		 PSReader temp = getReader(.temp)

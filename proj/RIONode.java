@@ -16,6 +16,11 @@ public abstract class RIONode extends Node {
 		RIOLayer = new ReliableInOrderMsgLayer(this);
 	}
 	
+	@Override 
+	public void start() {
+		// TODO read LSNs for in and out channel
+	}
+	
 	@Override
 	public void onReceive(Integer from, int protocol, byte[] msg) {
 		if(protocol == Protocol.DATA) {

@@ -158,6 +158,7 @@ class InChannel {
 			outOfOrderMsgs.put(seqNum, pkt);
 		}
 		// Duplicate packets are ignored
+		// TODO save lastSeqNumDelivered in a file
 		
 		return pktsToBeDelivered;
 	}
@@ -212,6 +213,8 @@ class OutChannel {
 			Method onTimeoutMethod = Callback.getMethod("onTimeout", parent, new String[]{ "java.lang.Integer", "java.lang.Integer" });
 			RIOPacket newPkt = new RIOPacket(protocol, ++lastSeqNumSent, payload);
 			unACKedPackets.put(lastSeqNumSent, newPkt);
+			
+			// TODO persist lastSeqNumSent
 			
 			n.send(destAddr, Protocol.DATA, newPkt.pack());
 			n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[]{ destAddr, lastSeqNumSent }), ReliableInOrderMsgLayer.TIMEOUT);
