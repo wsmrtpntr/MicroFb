@@ -1,13 +1,7 @@
-
-
-
-
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.commons.lang.Validate;
-
-
 
 
 /**
@@ -21,14 +15,16 @@ public class Facebook extends FileServerClient {
 	//
 
 	int server;
-    FileServerClient client;
+    Facebook client;
     PrintStream out;
+    List<String> commands;
     
     //
     // User data.
     //
-    
-	String currentUser = null;
+
+    String tentativeUser;
+	String currentUser;
 	List<String> friends;
 	List<String> requests;
 	List<String> messages;
@@ -46,33 +42,31 @@ public class Facebook extends FileServerClient {
 	// Implementation.
 	//
 	
-	public Facebook(int server, FileServerClient client) {
-		this.client = client;
-		this.server = server;
+	public Facebook() {
+		this.client = this;
+		this.server = 0;
 		out = System.out;
+		currentUser = null;
+		
 	}
-	
+
+	/**
+	 * onCommand overide, gets commands line by line.
+	 */
 	@Override
 	public void onCommand(String command) {
-		String[] pieces = command.split(" ");
-		
-		if(pieces[0].equals("create")) {
-			this.create(pieces[1]);
-		} else if(pieces[0].equals("login")) {
-			this.login(pieces[1]);
-		} else if(pieces[0].equals("logout")) {
-			this.logout();
-		} else if(pieces[0].equals("request-friend")) {
-			this.requestFriend(pieces[1]);
-		} else if(pieces[0].equals("accept-friend")) {
-			this.acceptFriend(pieces[1]);
-		} else if(pieces[0].equals("post-to-all")) {
-			this.postToAll(pieces[1]);
-		} else if(pieces[0].equals("read-all")) {
-			this.readAll();
+		if (commands == null) {
+			commands = new ArrayList<String>();
+			parseAndExecuteCommand(command);
+		} else {
+			commands.add(command);
 		}
 	}
 	
+	/**
+	 * Create an user.
+	 * @param user
+	 */
 	public void create(String user) {
 		Validate.notNull(user, "Operation aborted. No user provided.");
 		client.Create(server, 
@@ -80,21 +74,44 @@ public class Facebook extends FileServerClient {
 					  IoNotify.notify(this, "Create user " + user));
 	}
 
+	/**
+	 * Login an user.
+	 * @param user
+	 */
 	public void login(String user) {
 		Validate.notNull(user, "Operation aborted. No user provided.");
 		Validate.isTrue(currentUser == null, "Operation aborted. User " + currentUser + " already logged in.");
+		
+		tentativeUser = user;
+		friends = new ArrayList<String>();
+		requests = new ArrayList<String>();
+		messages = new ArrayList<String>();
+		
 		client.Get(server,
      			   user,
      			   IoNotify.notify(this, "Login " + user));
 	}
 
+	/**
+	 * Logout an user.
+	 */
 	public void logout() {
-		Validate.notNull(currentUser, "Operation aborted. No user logged in.");
+		Validate.notNull(tentativeUser, "Operation aborted. No user logged in.");
+		
+		tentativeUser = null;
 		currentUser = null;
+		friends = null;
+		requests = null;
+		messages = null;
+
 		printAction("Logout " + currentUser);
 		printResult("Success");
 	}
 
+	/**
+	 * Request a 'user' to be a friend.
+	 * @param user
+	 */
 	public void requestFriend(String user) {
 		Validate.notNull(user, "Operation aborted. No user provided.");
 		Validate.notNull(currentUser, "Operation aborted. No user logged in.");
@@ -104,6 +121,11 @@ public class Facebook extends FileServerClient {
   			          IoNotify.notify(this, "Request friend " + user));
 	}
 
+	/**
+	 * Accept 'user' to be a friend/ 'user' must have requested to be a 
+	 * friend first.
+	 * @param user
+	 */
 	public void acceptFriend(String user) {
 		Validate.notNull(user, "Operation aborted. No user provided.");
 		Validate.notNull (currentUser, "Operation aborted. No user logged in.");
@@ -140,7 +162,7 @@ public class Facebook extends FileServerClient {
 	 * @param text
 	 */
 	public void printAction(String text) {
-		out.print(text + ". ");
+		out.print("*** " + text + ". ");
 	}
 
 	/**
@@ -156,6 +178,20 @@ public class Facebook extends FileServerClient {
 	 * @param data
 	 */
 	public void loadUserInfo(String data) {
+
+		if (tentativeUser == null) {
+			
+			//
+			// No user.
+			//
+			
+			return;
+		}
+		currentUser = tentativeUser;
+		friends = new ArrayList<String>();
+		requests = new ArrayList<String>();
+		messages = new ArrayList<String>();
+	
 		String[] lines = data.split("\n");
 		for(String line : lines) {
 			if(line.startsWith(messagePrefix)) {
@@ -165,6 +201,36 @@ public class Facebook extends FileServerClient {
 			} else if(line.startsWith(requestPrefix)) {
 				friends.add(line.substring(requestPrefix.length()));
 			}
+		}
+	}
+	
+	public void parseAndExecuteCommand(String command) {
+		String[] pieces = command.split(" ");
+		
+		out.println("********************************************");
+		out.println(command);
+		out.println("********************************************");
+		
+		if(pieces[0].equals("create")) {
+			this.create(pieces[1]);
+		} else if(pieces[0].equals("login")) {
+			this.login(pieces[1]);
+		} else if(pieces[0].equals("logout")) {
+			this.logout();
+		} else if(pieces[0].equals("request-friend")) {
+			this.requestFriend(pieces[1]);
+		} else if(pieces[0].equals("accept-friend")) {
+			this.acceptFriend(pieces[1]);
+		} else if(pieces[0].equals("post-to-all")) {
+			this.postToAll(pieces[1]);
+		} else if(pieces[0].equals("read-all")) {
+			this.readAll();
+		}
+	}
+	
+	public void executeNextCommand() {
+		if (commands.size() > 0) {
+			parseAndExecuteCommand(commands.remove(0));
 		}
 	}
 }

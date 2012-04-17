@@ -5,3 +5,4 @@ time
 0 put 1 aa abc 
 0 get 1 aa
 0 delete 1 aa
+exit
