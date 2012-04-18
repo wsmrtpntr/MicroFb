@@ -2,27 +2,13 @@ start 0
 start 1
 time
 0 create a
-time
-0 create a
-time
 0 create b
-time
 0 login a
-time
 0 request b
-time
 0 logout
-time
 0 login b
-time
 0 accept a
-time
 0 post-to-all abc
-time
 0 logout
-time
 0 login a
-time
 0 read-all
-time
-exit

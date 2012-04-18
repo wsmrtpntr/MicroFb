@@ -21,7 +21,7 @@ public class FileServerNode extends RIONode {
 
 	@Override
 	public void start() {
-		super.start();
+		//super.start();
 		
 		// TODO Auto-generated method stub
 		/*if .temp exists
@@ -78,48 +78,37 @@ public class FileServerNode extends RIONode {
 	
 	protected void processMessage(Integer from, int protocol, byte[] msg) {
 		String[] cmds = Utility.byteArrayToString(msg).split(" ");
-		switch(cmds[0]){
-		case "create": {
+		if (cmds[0].equals("create")) {
 			IoStatus ret = create(cmds[2]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
-					Utility.stringToByteArray("acknowledge create " + cmds[1] + " " + Integer.toString(ret.code)));
-			}
-			break;
-		case "get": {
+					Utility.stringToByteArray("acknowledge create " + cmds[1] + " " + Integer.toString(ret.getCode())));
+		} else if (cmds[0].equals("get")) {
 			StringBuilder results = new StringBuilder();
 			IoStatus ret = get(cmds[2], results);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
-					Utility.stringToByteArray("acknowledge get " + cmds[1] + " " + Integer.toString(ret.code) + " " + results.toString()));
-			}
-			break;
-		case "append": {
+					Utility.stringToByteArray("acknowledge get " + cmds[1] + " " + Integer.toString(ret.getCode()) + " " + results.toString()));
+		} else if (cmds[0].equals("append")) {
 			IoStatus ret = append(cmds[2], cmds[3]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
-					Utility.stringToByteArray("acknowledge append " + cmds[1] + " " + Integer.toString(ret.code)));
-			}
-			break;
-		case "delete": {
+					Utility.stringToByteArray("acknowledge append " + cmds[1] + " " + Integer.toString(ret.getCode())));
+		} else if (cmds[0].equals("delete")) {
 			IoStatus ret = delete(cmds[2]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
-					Utility.stringToByteArray("acknowledge delete " + cmds[1] + " " + Integer.toString(ret.code)));
-			}
-			break;
-		case "put": {
+					Utility.stringToByteArray("acknowledge delete " + cmds[1] + " " + Integer.toString(ret.getCode())));
+		} else if (cmds[0].equals("put")) {
 			IoStatus ret = put(cmds[2], cmds[3]);
 			RIOSend(from, 
 					Protocol.RIOTEST_PKT, 
-					Utility.stringToByteArray("acknowledge put " + cmds[1] + " " + Integer.toString(ret.code)));
-			}
-			break;
-		case "heartbeat":
+					Utility.stringToByteArray("acknowledge put " + cmds[1] + " " + Integer.toString(ret.getCode())));
+		} else if (cmds[0].equals("heartbeat")) {
 			// ignore the heart beats
-			break;
-		default:
-			break;
+			;
+		} else {
+			;
 		}
 	}
 

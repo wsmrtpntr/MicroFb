@@ -28,25 +28,19 @@ public class FileServerClient extends FileServerNode {
 			return;
 		}
 		
-		switch(pieces[1]){
-			case "create": 
-			case "append":
-			case "put":
-			case "delete": {
+		if (pieces[1].equals("create") || 
+		    pieces[1].equals("append") ||
+		    pieces[1].equals("put") ||
+		    pieces[1].equals("delete")) {
 				Integer requestId = Integer.parseInt(pieces[2]);
 				IoStatus status = IoStatus.parseInt(Integer.parseInt(pieces[3]));
 				NotifyAndRemove(requestId, status);
-				}
-				break;
-				
-			case "get" : {
+		} else if (pieces[1].equals("get")) {
 				Integer requestId = Integer.parseInt(pieces[2]);
 				IoStatus status = IoStatus.parseInt(Integer.parseInt(pieces[3]));
-				CompleteRequest(requestId, status, pieces.length >= 5 ? pieces[4] : null);				
-				}
-			break;
-			
-			default: break;
+				CompleteRequest(requestId, status, pieces.length >= 5 ? pieces[4] : null);
+		} else {
+			;
 		}
 	}
 	
@@ -99,16 +93,21 @@ public class FileServerClient extends FileServerNode {
 		Method onTimeoutMethod = null;
 		try {
 			onTimeoutMethod = Callback.getMethod("onTimeout", this, new String[]{ "java.lang.Integer"});
-		} catch (ClassNotFoundException | NoSuchMethodException
-				| SecurityException e) {
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch(NoSuchMethodException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch(SecurityException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		addTimeout(new Callback(onTimeoutMethod, this, new Object[]{ requestId }), ReliableInOrderMsgLayer.TIMEOUT);
 		
 		// send heart beats to move the clock
-		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
-		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
+		//RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
+		//RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
 		RIOSend(destAddr, Protocol.RIOTEST_PKT, Utility.stringToByteArray("heartbeat"));
 	}
 	

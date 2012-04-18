@@ -51,20 +51,36 @@ public class Facebook extends FileServerClient {
 	}
 
 	/**
-	 * onCommand overide, gets commands line by line.
+	 * onCommand override, gets commands line by line. Dispatch the facebook 
+	 * commands.
 	 */
 	@Override
 	public void onCommand(String command) {
-		if (commands == null) {
-			commands = new ArrayList<String>();
-			parseAndExecuteCommand(command);
-		} else {
-			commands.add(command);
+		String[] pieces = command.split(" ");
+		
+		out.println("********************************************");
+		out.println("Initiate " + command);
+		out.println("********************************************");
+		
+		if(pieces[0].equals("create")) {
+			this.create(pieces[1]);
+		} else if(pieces[0].equals("login")) {
+			this.login(pieces[1]);
+		} else if(pieces[0].equals("logout")) {
+			this.logout();
+		} else if(pieces[0].equals("request")) {
+			this.requestFriend(pieces[1]);
+		} else if(pieces[0].equals("accept")) {
+			this.acceptFriend(pieces[1]);
+		} else if(pieces[0].equals("post")) {
+			this.postToAll(pieces[1]);
+		} else if(pieces[0].equals("read")) {
+			this.readAll();
 		}
 	}
 	
 	/**
-	 * Create an user.
+	 * Create an user. Create the <user> file.
 	 * @param user
 	 */
 	public void create(String user) {
@@ -75,7 +91,8 @@ public class Facebook extends FileServerClient {
 	}
 
 	/**
-	 * Login an user.
+	 * Login an user. Read the user file and call loadUserInfo to initialize the 
+	 * friends, requests and messages lists. Store the current user.
 	 * @param user
 	 */
 	public void login(String user) {
@@ -83,17 +100,14 @@ public class Facebook extends FileServerClient {
 		Validate.isTrue(currentUser == null, "Operation aborted. User " + currentUser + " already logged in.");
 		
 		tentativeUser = user;
-		friends = new ArrayList<String>();
-		requests = new ArrayList<String>();
-		messages = new ArrayList<String>();
 		
 		client.Get(server,
      			   user,
-     			   IoNotify.notify(this, "Login " + user));
+     			   IoNotify.notify(this, "Login " + user, true));
 	}
 
 	/**
-	 * Logout an user.
+	 * Logout an user. Forget the curent user.
 	 */
 	public void logout() {
 		Validate.notNull(tentativeUser, "Operation aborted. No user logged in.");
@@ -109,7 +123,8 @@ public class Facebook extends FileServerClient {
 	}
 
 	/**
-	 * Request a 'user' to be a friend.
+	 * Request a 'user' to be a friend. Write in his <user> file the words:
+	 * 'Request <currentUser>' 
 	 * @param user
 	 */
 	public void requestFriend(String user) {
@@ -122,35 +137,49 @@ public class Facebook extends FileServerClient {
 	}
 
 	/**
-	 * Accept 'user' to be a friend/ 'user' must have requested to be a 
-	 * friend first.
+	 * Accept 'user' to be a friend. 'user' must have requested to be a 
+	 * friend first. Write in the <currentUser> file the words: Friend:<user>.
 	 * @param user
 	 */
 	public void acceptFriend(String user) {
 		Validate.notNull(user, "Operation aborted. No user provided.");
 		Validate.notNull (currentUser, "Operation aborted. No user logged in.");
-		Validate.isTrue (requests.contains(user), "No request found from" + user + ".");
-		Validate.isTrue (!friends.contains(user), user + "is already a frind.");
+		Validate.isTrue (requests.contains(user), "No request found from " + user + ".");
+		Validate.isTrue (!friends.contains(user), user + " is already a frind.");
+		requests.remove(user);
+		friends.add(user);
 		client.Append (server,
 		               currentUser,
-		               friendPrefix + currentUser + delimiter,
+		               friendPrefix + user + delimiter,
 		               IoNotify.notify(this, "Accept friend " + user));
 	}
 
+	/**
+	 * Post a message to all friends. For every friend write in his file the words
+	 * Message:<message>. 
+	 * @param message
+	 */
 	public void postToAll(String message) {
 		Validate.notNull(message, "Operation aborted. No message provided.");
 		Validate.notNull(currentUser, "Operation aborted. No user logged in.");
 		for(String user : friends) {
 			client.Append (server,
 		                   user,
-		                   messagePrefix + currentUser + delimiter,
+		                   messagePrefix + message + delimiter,
 		                   IoNotify.notify(this, "Send message to " + user));
 		}
 	}
 
+	/**
+	 * Print all messages. The message list was already loaded at login.
+	 * @return
+	 */
 	public String[] readAll() {
 		Validate.notNull(currentUser, "Operation aborted. No user logged in.");
-		return messages.toArray(null);
+		for(String message : messages) {
+			out.println(message);
+		}
+		return null;
 	}
 
 	public void setUser(String user) {
@@ -174,8 +203,9 @@ public class Facebook extends FileServerClient {
 	}
 
 	/**
-	 * 
-	 * @param data
+	 * Parse the data froom the <user> file to construct the friends, requests 
+	 * and messages lists.
+	 * @param data - contents of the <user> file.
 	 */
 	public void loadUserInfo(String data) {
 
@@ -199,38 +229,8 @@ public class Facebook extends FileServerClient {
 			} else if(line.startsWith(friendPrefix)) {
 				friends.add(line.substring(friendPrefix.length()));
 			} else if(line.startsWith(requestPrefix)) {
-				friends.add(line.substring(requestPrefix.length()));
+				requests.add(line.substring(requestPrefix.length()));
 			}
-		}
-	}
-	
-	public void parseAndExecuteCommand(String command) {
-		String[] pieces = command.split(" ");
-		
-		out.println("********************************************");
-		out.println(command);
-		out.println("********************************************");
-		
-		if(pieces[0].equals("create")) {
-			this.create(pieces[1]);
-		} else if(pieces[0].equals("login")) {
-			this.login(pieces[1]);
-		} else if(pieces[0].equals("logout")) {
-			this.logout();
-		} else if(pieces[0].equals("request-friend")) {
-			this.requestFriend(pieces[1]);
-		} else if(pieces[0].equals("accept-friend")) {
-			this.acceptFriend(pieces[1]);
-		} else if(pieces[0].equals("post-to-all")) {
-			this.postToAll(pieces[1]);
-		} else if(pieces[0].equals("read-all")) {
-			this.readAll();
-		}
-	}
-	
-	public void executeNextCommand() {
-		if (commands.size() > 0) {
-			parseAndExecuteCommand(commands.remove(0));
 		}
 	}
 }
